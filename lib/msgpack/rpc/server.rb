@@ -13,17 +13,18 @@ require 'msgpack/rpc'
 module MessagePack
   module Rpc
     module Server
-      class Error < Exception
-        def initialize(data)
-          @data = data
-        end
-
-        attr_reader :data
-      end
-
       class << self
         def included(klass)
           m = Module.new {
+            @@error = Class.new(StandardError) {
+              def initialize(label, data)
+                super("error ocurred on precedure \"#{label}\"")
+                @data = data
+              end
+
+              attr_reader :data
+            }
+
             @@deferred = Class.new {
               def initialize(id, klass)
                 @id    = id
@@ -33,11 +34,29 @@ module MessagePack
               def resolve(result)
                 packet = [1, @id, nil, result].to_msgpack
                 @klass.instance_eval {send_data(packet)}
+
+                class << self
+                  undef_method :resolve, :reject
+                end
               end
 
               def reject(error)
                 packet = [1, @id, error, nil].to_msgpack
-                @klass.instance_eval {send_data(packet)}
+                @klass.instance_eval {
+                  send_data(packet)
+
+                  if not error.kind_of?(Exception)
+                    label = caller_locations(3..3)[0].base_label
+                    error = @@error.new(label, error)
+                  end
+
+                  error.set_backtrace(caller(3..-1))
+                  error_occured(error)
+                }
+
+                class << self
+                  undef_method :resolve, :reject
+                end
               end
             }
 
@@ -116,11 +135,11 @@ module MessagePack
       end
       private :do_notify
 
-      def error_occured(msg)
+      def error_occured(e)
         if self.respond_to?(:on_error, true)
-          __send__(:on_error, msg)
+          __send__(:on_error, e)
         else
-          STDERR.print("#{msg}")
+          STDERR.print("#{e.message}")
         end
       end
       private :error_occured
@@ -170,7 +189,7 @@ module MessagePack
           send_data([1, id, error, nil].to_msgpack)
         end
 
-        error_occured(e.message)
+        error_occured(e)
       end
       private :eval_message
 
@@ -194,10 +213,10 @@ module MessagePack
 
         rescue MessagePack::UnpackError => e
           unpacker.reset
-          error_occured(e.message)
+          error_occured(e)
 
         rescue => e
-          error_occured(e.message)
+          error_occured(e)
         end
       end
     end
