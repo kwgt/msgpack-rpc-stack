@@ -71,8 +71,8 @@ class Server
   end
   private :send_data
 
-  def on_error(msg)
-    $logger.error(msg)
+  def on_error(e)
+    $logger.error(e.message)
   end
   private :on_error
 

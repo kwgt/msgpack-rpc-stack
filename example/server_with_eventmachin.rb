@@ -34,8 +34,8 @@ class RpcServer < EM::Connection
 
   # send_dataメソッドはEM::Connectionで提供されるので定義なし
 
-  def on_error(msg)
-    $logger.error(msg)
+  def on_error(e)
+    $logger.error(e.message)
   end
 
   #
