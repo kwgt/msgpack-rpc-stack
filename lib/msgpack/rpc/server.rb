@@ -74,8 +74,12 @@ module MessagePack
               return @remote_async
             end
 
-            def msgpack_options(opts = nil)
-              return (@msgpack_options = opts)
+            def msgpack_options(opts = :none)
+              if opts.nil? || opts.kind_of?(Hash)
+                @msgpack_options = opts
+              end
+
+              return @msgpack_options
             end
 
             def new_unpacker

@@ -18,7 +18,11 @@ module MessagePack
           m = Module.new {
             klass.instance_variable_set(:@msgpack_options, {}) 
 
-            def msgpack_options(opts = nil)
+            def msgpack_options(opts = :none)
+              if opts.nil? || opts.kind_of?(Hash)
+                @msgpack_options = opts
+              end
+
               return (@msgpack_options = opts)
             end
 
