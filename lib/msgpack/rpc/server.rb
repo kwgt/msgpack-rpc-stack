@@ -205,7 +205,7 @@ module MessagePack
         msg = MessagePack.unpack(data, self.class.msgpack_options)
 
         if not msg.kind_of?(Array)
-          error_occured("not array message is received")
+          error_occured(RantimeError.new("not array message is received"))
         end
 
         eval_message(msg)

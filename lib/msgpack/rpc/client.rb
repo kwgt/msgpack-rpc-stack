@@ -56,6 +56,17 @@ module MessagePack
       end
       private :unpacker
 
+      def error_occured(e)
+        e = ProtocolError.new(m) if e.kind_of?(String)
+
+        if self.respond_to?(:on_error, true)
+          __send__(:on_error, e)
+        else
+          STDERR.print("#{e.message}")
+        end
+      end
+      private :error_occured
+
       def call(meth, *args, &blk)
         raise ArgumentError.new("handler is not spcified") if not blk
 
@@ -71,7 +82,7 @@ module MessagePack
 
       def eval_response(resp)
         if not resp.kind_of?(Array)
-          raise ProtocolError.new("responce is not array")
+          error_occured("responce is not array")
         end
 
         case resp.shift
@@ -79,10 +90,9 @@ module MessagePack
           id, error, result = resp
 
           if not session_map.include?(id)
-            raise ProtocolError.new("unknwon responce id is received.")
-          end
+            error_occured("unknwon responce id is received.")
 
-          if error.nil?
+          elsif error.nil?
             # when success
             session_map.delete(id).(result, nil)
 
@@ -91,21 +101,22 @@ module MessagePack
             session_map.delete(id).(nil, error)
 
           else
-             raise ProtocolError.new("unknwon responce id is received.")
+            error_occured("unknwon responce id is received.")
           end
 
         when 2 # as notification
-          meth = resp.shift.to_sym
+          meth = resp[0].to_sym
+          args = resp[1]
 
           if notify_handler.include?(meth)
-            notify_handler[meth].(*resp)
+            notify_handler[meth].(*args)
 
           else
             STDERR.print("unhandled notification '#{meth}' received.\n")
           end
 
         else
-          raise ProtocolError.new("unknown response received")
+          error_occured("unknown response received")
         end
       end
       private :eval_response
@@ -120,10 +131,10 @@ module MessagePack
 
         rescue MessagePack::UnpackError => e
           unpacker.reset
-          raise(e)
+          error_occured(e)
 
         rescue => e
-          raise(e)
+          error_occured(e)
         end
       end
 
