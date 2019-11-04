@@ -11,6 +11,7 @@ class TestError < Test::Unit::TestCase
   class Client
     include MessagePack::Rpc::Client
     include ClientBase
+    include ClientBase::SyncCall
   end
 
   test "not callable procedure" do
@@ -231,6 +232,5 @@ class TestError < Test::Unit::TestCase
       port.close if port
       server.down if server
     end
-
   end
 end

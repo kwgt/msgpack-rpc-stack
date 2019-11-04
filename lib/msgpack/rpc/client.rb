@@ -57,7 +57,7 @@ module MessagePack
       private :unpacker
 
       def error_occured(e)
-        e = ProtocolError.new(m) if e.kind_of?(String)
+        e = ProtocolError.new(e) if e.kind_of?(String)
 
         if self.respond_to?(:on_error, true)
           __send__(:on_error, e)
@@ -74,10 +74,16 @@ module MessagePack
 
         session_map[id] = blk
         send_data([0, id, meth, args].to_msgpack)
+
+        return id
       end
 
       def notify(meth, *args)
         send_data([2, meth, args].to_msgpack)
+      end
+
+      def cancel(id)
+        session_map.delete(id)
       end
 
       def eval_response(resp)
@@ -101,7 +107,8 @@ module MessagePack
             session_map.delete(id).(nil, error)
 
           else
-            error_occured("unknwon responce id is received.")
+            session_map.delete(id)
+            error_occured("invalid responce data")
           end
 
         when 2 # as notification
@@ -122,7 +129,7 @@ module MessagePack
       private :eval_response
 
       def receive_dgram(data)
-        eval_eval_response(MessagePack.unpack(data, self.class.msgpack_options))
+        eval_response(MessagePack.unpack(data, self.class.msgpack_options))
       end
 
       def receive_stream(data)

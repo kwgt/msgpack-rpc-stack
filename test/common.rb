@@ -96,13 +96,17 @@ module ClientBase
   end
   private :send_data
 
-  def call(meth, *args)
-    super(meth, *args) {|ret, err| @que << (ret || Error.new(err))}
+  module SyncCall
+    def call(meth, *args)
+      super(meth, *args) { |ret, err|
+        @que << ((err && Error.new(err)) || ret)
+      }
 
-    ret = @que.deq
+      ret = @que.deq
 
-    raise(ret) if ret.kind_of?(Error)
+      raise(ret) if ret.kind_of?(Error)
 
-    return ret
+      return ret
+    end
   end
 end

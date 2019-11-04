@@ -11,6 +11,7 @@ class TestSendNotify < Test::Unit::TestCase
   class Client
     include MessagePack::Rpc::Client
     include ClientBase
+    include ClientBase::SyncCall
   end
 
   test "server to client" do
