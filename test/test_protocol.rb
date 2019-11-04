@@ -102,6 +102,8 @@ class TestProtocol < Test::Unit::TestCase
           end
         }
 
+        sleep
+
       rescue Exit
         sock.close
         serv.close
@@ -142,6 +144,8 @@ class TestProtocol < Test::Unit::TestCase
             sock.flush
           end
         }
+
+        sleep
 
       rescue Exit
         sock.close

@@ -12,8 +12,82 @@ require 'msgpack/rpc'
 
 module MessagePack
   module Rpc
+
+    #
+    # Module that implemented server protocol of MessagePack-RPC.
+    # 
+    # @abstract
+    #   Include from the class that implements the rpc server. You can expose
+    #   If you receive a protocol level error, override the on_error method.
+    #   the methods defined in that class as RPC procedures.
+    #
     module Server
       class << self
+        #
+        # @!method msgpack_options(**opts)
+        #   set MessagePack::Unpacker option.
+        #
+        #   @example set :symbolize_keys option
+        #     class Server
+        #       include MessagePack::Rpc::Server
+        #
+        #       msgpack_options = {:symbolize_keys => true}
+        #
+        #       def test(data)
+        #         # data's key are symbolized.
+        #         return data[:data]
+        #       end
+        #       remote_public :test
+        #     end
+
+        #
+        # @!method remote_public(name)
+        #   expose syncronous procedure.
+        #   The return value of the method exposed by this method is the 
+        #   return value of the procedure. If an exception occurs, the
+        #   exception is returned as an error value.
+        #
+        #   @param [Symbol] name
+        #     target method name.
+        #
+        #   @example expose syncronous procedure
+        #     class Server
+        #       include MessagePack::Rpc::Server
+        #
+        #       def test(id)
+        #         raise("id isnot defined") if id.nil?
+        #         return "hello #{id}"
+        #       end
+        #       remote_public :test
+        #     end
+        #
+
+        #
+        # @!method remote_async(name)
+        #   expose asynchronous procedure.
+        #   The method exposed by this method takes a deferred object as its
+        #   first argument. Returns the processing result asynchronously
+        #   through this object.
+        #
+        #   @param [Symbol] name
+        #     target method name.
+        #
+        #   @example expose asyncronous procedure
+        #     class Server
+        #       include MessagePack::Rpc::Server
+        #
+        #       def test(df, id)
+        #         if id.nil?
+        #           df.reject("id isnot defined")
+        #         else
+        #           df.resolve("hello #{id}")
+        #         end
+        #       end
+        #       remote_async :test
+        #     end
+        #
+
+        # @!visibility protected
         def included(klass)
           m = Module.new {
             @@error = Class.new(StandardError) {
@@ -197,10 +271,30 @@ module MessagePack
       end
       private :eval_message
 
+      #
+      # send the notification to peer rpc client
+      #
+      # @param [Symbol] meth
+      #   notify name
+      #
+      # @param [Array] args
+      #   argument for notification
+      #
       def notify(meth, *args)
         send_data([2, meth, args].to_msgpack)
       end
 
+      #
+      # emqueu the received datagram to communication buffer
+      #
+      # @param [Blob] data
+      #   recevied data from peer rpc client.
+      #
+      # @note
+      #   Use this method for datagram communication. \
+      #   Use it when it is guaranteed that data is exchanged \
+      #   in packets (it works a bit faster).
+      #
       def receive_dgram(data)
         msg = MessagePack.unpack(data, self.class.msgpack_options)
 
@@ -211,6 +305,12 @@ module MessagePack
         eval_message(msg)
       end
 
+      #
+      # emqueu the received data to communication buffer
+      #
+      # @param [Blob] data
+      #   recevied data from peer rpc client.
+      #
       def receive_stream(data)
         begin
           unpacker.feed_each(data) {|msg| eval_message(msg)}

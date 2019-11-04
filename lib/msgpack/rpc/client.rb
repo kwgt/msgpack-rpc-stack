@@ -12,6 +12,13 @@ require 'msgpack/rpc'
 
 module MessagePack
   module Rpc
+    #
+    # Module that implemented client protocol of MessagePack-RPC.
+    # 
+    # @abstract
+    #   Include from the class that implements the rpc client. 
+    #   If you receive a protocol level error, override the on_error method.
+    #
     module Client
       class << self
         def included(klass)
@@ -67,6 +74,27 @@ module MessagePack
       end
       private :error_occured
 
+      #
+      # call the procedure of peer rpc server
+      #
+      # @param [Symbol] meth
+      #   target procedure name.
+      #
+      # @param [Array] args
+      #   arguments for procedure.
+      #
+      # @return [Integer]
+      #   assigned mesaage id
+      #
+      # @yield [res, err]
+      #   callback that is when the procedure call completes.
+      #
+      # @yieldparam [Object] res
+      #   responce of procedure when procedure successed.
+      #
+      # @yieldparam [Object] err
+      #   error data of procedure when procedure failed.
+      #
       def call(meth, *args, &blk)
         raise ArgumentError.new("handler is not spcified") if not blk
 
@@ -78,12 +106,32 @@ module MessagePack
         return id
       end
 
-      def notify(meth, *args)
-        send_data([2, meth, args].to_msgpack)
-      end
-
+      #
+      # cacel the call message
+      #
+      # @param [Integer] id
+      #   message id of calling message (return value of
+      #   MessagePack::Rpc::Client#call())
+      #
+      # @note
+      #    When this method is called, the procedure call corresponding to
+      #   the ID specified in the argument is cancelled.
+      #
       def cancel(id)
         session_map.delete(id)
+      end
+
+      #
+      # send the notification to peer rpc server
+      #
+      # @param [Symbol] meth
+      #   notify name
+      #
+      # @param [Array] args
+      #   argument for notification
+      #
+      def notify(meth, *args)
+        send_data([2, meth, args].to_msgpack)
       end
 
       def eval_response(resp)
@@ -128,10 +176,27 @@ module MessagePack
       end
       private :eval_response
 
+      #
+      # emqueu the received datagram to communication buffer
+      #
+      # @param [Blob] data
+      #   recevied data from rpc server.
+      #
+      # @note
+      #   Use this method for datagram communication. \
+      #   Use it when it is guaranteed that data is exchanged \
+      #   in packets (it works a bit faster).
+      #
       def receive_dgram(data)
         eval_response(MessagePack.unpack(data, self.class.msgpack_options))
       end
 
+      #
+      # emqueu the received data to communication buffer
+      #
+      # @param [Blob] data
+      #   recevied data from rpc server.
+      #
       def receive_stream(data)
         begin
           unpacker.feed_each(data) {|resp| eval_response(resp)}
@@ -145,6 +210,16 @@ module MessagePack
         end
       end
 
+      #
+      # define the notify method
+      #
+      # @param [Symbol] name
+      #   notification name
+      #
+      # @yield [*args]
+      #    callback that is when received the notification
+      #   from peer rpc server.
+      #
       def on(name, &blk)
         raise ArgumentError.new("handler is not spcified") if not blk
         notify_handler[name] = blk
