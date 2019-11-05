@@ -18,7 +18,14 @@ module MessagePack
     # 
     # @abstract
     #   Include from the class that implements the rpc server. You can expose
-    #   If you receive a protocol level error, override the on_error method.
+    #   When the client implementation class receives data from the
+    #   communication line, it must call the receive_data() method and pass
+    #   received data to the MessagePack::Rpc::Server module.
+    #   Also, the client implementation class should define a method
+    #   send_data() to actually send the data. Call this method from
+    #   within the MessagePack::Rpc::Server module if necessary
+    #   (Implement send_data() method to accept string objects in arguments).
+    #   If you receive a protocol level error, override the on_error() method.
     #   the methods defined in that class as RPC procedures.
     #
     module Server
@@ -291,8 +298,8 @@ module MessagePack
       #   recevied data from peer rpc client.
       #
       # @note
-      #   Use this method for datagram communication. \
-      #   Use it when it is guaranteed that data is exchanged \
+      #   Use this method for datagram communication.
+      #   Use it when it is guaranteed that data is exchanged
       #   in packets (it works a bit faster).
       #
       def receive_dgram(data)

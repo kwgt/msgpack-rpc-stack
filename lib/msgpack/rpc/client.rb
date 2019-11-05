@@ -17,7 +17,14 @@ module MessagePack
     # 
     # @abstract
     #   Include from the class that implements the rpc client. 
-    #   If you receive a protocol level error, override the on_error method.
+    #   When the client implementation class receives data from the
+    #   communication line, it must call the receive_data() method and pass
+    #   received data to the MessagePack::Rpc::Client module.
+    #   Also, the client implementation class should define a method
+    #   send_data() to actually send the data. Call this method from
+    #   within the MessagePack::Rpc::Client module if necessary
+    #   (Implement send_data() method to accept string objects in arguments).
+    #   If you receive a protocol level error, override the on_error() method.
     #
     module Client
       class << self
