@@ -1,7 +1,6 @@
 require 'test/unit'
 require 'socket'
 require './test/common'
-require 'pry'
 
 require 'msgpack/rpc/server'
 require 'msgpack/rpc/client'
@@ -118,7 +117,6 @@ class TestProtocol < Test::Unit::TestCase
       que << e
     }
 
-    #binding.pry
     port.call(:test, 0) {}
 
     assert_raise_kind_of(MessagePack::Rpc::ProtocolError) {
@@ -166,7 +164,6 @@ class TestProtocol < Test::Unit::TestCase
     }
 
     begin
-      #binding.pry
       route << :cp2
       id = port.call(:test) { |res, err|
         route << :cp3
